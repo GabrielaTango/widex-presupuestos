@@ -1,0 +1,35 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    expose:
+      - "8080"
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - ConnectionStrings__DefaultConnection=Server=${DB_SERVER};Database=${DB_NAME};User Id=${DB_USER};Password=${DB_PASSWORD};TrustServerCertificate=true;
+      - ConnectionStrings__TangoConnection=Server=${DB_SERVER};Database=${DB_TANGO_NAME};User Id=${DB_USER};Password=${DB_PASSWORD};TrustServerCertificate=true;
+      - Jwt__Key=${JWT_KEY}
+      - Jwt__Issuer=WidexPresupuestos
+      - Jwt__Audience=WidexPresupuestos
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

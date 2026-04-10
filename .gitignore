@@ -1,0 +1,51 @@
+# Environment variables y credenciales
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.pfx
+*.p12
+secrets.json
+
+# .NET
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+*.dll
+*.exe
+*.pdb
+*.cache
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+backend/appsettings.json
+backend/appsettings.Development.json
+backend/appsettings.Production.json
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.swp
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Claude
+.claude/

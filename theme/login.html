@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediGest - Iniciar Sesion</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #212529;
+            --accent-color: #667eea;
+            --secondary-color: #6c757d;
+            --light-bg: #f8f9fa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ed 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            display: flex;
+            width: 100%;
+            max-width: 1000px;
+            min-height: 600px;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            margin: 2rem;
+        }
+
+        /* Left Panel - Branding */
+        .brand-panel {
+            flex: 1;
+            background: linear-gradient(135deg, #212529 0%, #343a40 50%, #495057 100%);
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .brand-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 50%);
+            animation: pulse 15s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .brand-panel .content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .brand-logo .icon-wrapper {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .brand-logo .icon-wrapper i {
+            font-size: 2rem;
+            color: white;
+        }
+
+        .brand-logo h1 {
+            color: white;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .brand-tagline {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+            margin-bottom: 3rem;
+            line-height: 1.6;
+        }
+
+        .features-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .features-list li {
+            display: flex;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .features-list li .feature-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .features-list li:nth-child(1) .feature-icon {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .features-list li:nth-child(2) .feature-icon {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .features-list li:nth-child(3) .feature-icon {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .features-list li:nth-child(4) .feature-icon {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        /* Right Panel - Login Form */
+        .login-panel {
+            flex: 1;
+            padding: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .login-header {
+            margin-bottom: 2rem;
+        }
+
+        .login-header h2 {
+            color: var(--primary-color);
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-header p {
+            color: var(--secondary-color);
+            margin: 0;
+        }
+
+        .form-floating {
+            margin-bottom: 1rem;
+        }
+
+        .form-floating .form-control {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1rem 1rem 1rem 3rem;
+            height: 60px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-floating .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(33, 37, 41, 0.1);
+        }
+
+        .form-floating label {
+            padding-left: 3rem;
+            color: var(--secondary-color);
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--secondary-color);
+            font-size: 1.25rem;
+            z-index: 5;
+        }
+
+        .form-floating .form-control:focus + label,
+        .form-floating .form-control:not(:placeholder-shown) + label {
+            padding-left: 1rem;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--secondary-color);
+            cursor: pointer;
+            z-index: 5;
+            padding: 0.5rem;
+        }
+
+        .password-toggle:hover {
+            color: var(--primary-color);
+        }
+
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .form-check-label {
+            color: var(--secondary-color);
+            font-size: 0.9rem;
+        }
+
+        .forgot-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .forgot-link:hover {
+            text-decoration: underline;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            background-color: var(--primary-color);
+            border: none;
+            color: white;
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-login:hover {
+            background-color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e9ecef;
+        }
+
+        .divider span {
+            padding: 0 1rem;
+            color: var(--secondary-color);
+            font-size: 0.85rem;
+        }
+
+        .social-login {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn-social {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: var(--secondary-color);
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .btn-social:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background: #f8f9fa;
+        }
+
+        .btn-social i {
+            font-size: 1.25rem;
+        }
+
+        .register-link {
+            text-align: center;
+            color: var(--secondary-color);
+        }
+
+        .register-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* Alert styles */
+        .alert-login {
+            border-radius: 12px;
+            border: none;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .alert-login.show {
+            display: flex;
+            align-items: center;
+        }
+
+        .alert-login i {
+            margin-right: 0.75rem;
+            font-size: 1.25rem;
+        }
+
+        /* Footer */
+        .login-footer {
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        .login-footer p {
+            color: var(--secondary-color);
+            font-size: 0.8rem;
+            margin: 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .login-container {
+                flex-direction: column;
+                max-width: 100%;
+                margin: 1rem;
+                min-height: auto;
+            }
+
+            .brand-panel {
+                padding: 2rem;
+                min-height: 300px;
+            }
+
+            .brand-logo h1 {
+                font-size: 2rem;
+            }
+
+            .features-list {
+                display: none;
+            }
+
+            .login-panel {
+                padding: 2rem;
+            }
+
+            .social-login {
+                flex-direction: column;
+            }
+        }
+
+        /* Loading state */
+        .btn-login.loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .btn-login.loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin: -10px 0 0 -10px;
+            border: 2px solid white;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <!-- Brand Panel -->
+        <div class="brand-panel">
+            <div class="content">
+                <div class="brand-logo">
+                    <div class="icon-wrapper">
+                        <i class="bi bi-heart-pulse-fill"></i>
+                    </div>
+                    <h1>MediGest</h1>
+                </div>
+                <p class="brand-tagline">
+                    Sistema integral de gestion de presupuestos y pedidos para el sector salud.
+                    Optimiza tus procesos y mejora la eficiencia de tu organizacion.
+                </p>
+                <ul class="features-list">
+                    <li>
+                        <span class="feature-icon"><i class="bi bi-clipboard2-pulse"></i></span>
+                        Gestion de presupuestos medicos
+                    </li>
+                    <li>
+                        <span class="feature-icon"><i class="bi bi-box-seam"></i></span>
+                        Control de pedidos e inventario
+                    </li>
+                    <li>
+                        <span class="feature-icon"><i class="bi bi-graph-up-arrow"></i></span>
+                        Reportes y estadisticas en tiempo real
+                    </li>
+                    <li>
+                        <span class="feature-icon"><i class="bi bi-shield-check"></i></span>
+                        Seguridad y cumplimiento normativo
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Login Panel -->
+        <div class="login-panel">
+            <div class="login-header">
+                <h2>Bienvenido de vuelta</h2>
+                <p>Ingresa tus credenciales para acceder al sistema</p>
+            </div>
+
+            <!-- Alert Message -->
+            <div class="alert alert-danger alert-login" id="alertError">
+                <i class="bi bi-exclamation-circle-fill"></i>
+                <span>Usuario o contrasena incorrectos</span>
+            </div>
+
+            <form id="loginForm">
+                <!-- Email Field -->
+                <div class="form-floating position-relative mb-3">
+                    <i class="bi bi-envelope input-icon"></i>
+                    <input type="email" class="form-control" id="email" placeholder="correo@ejemplo.com" required>
+                    <label for="email">Correo electronico</label>
+                </div>
+
+                <!-- Password Field -->
+                <div class="form-floating position-relative mb-3">
+                    <i class="bi bi-lock input-icon"></i>
+                    <input type="password" class="form-control" id="password" placeholder="Contrasena" required>
+                    <label for="password">Contrasena</label>
+                    <button type="button" class="password-toggle" onclick="togglePassword()">
+                        <i class="bi bi-eye" id="toggleIcon"></i>
+                    </button>
+                </div>
+
+                <!-- Form Options -->
+                <div class="form-options">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="rememberMe">
+                        <label class="form-check-label" for="rememberMe">
+                            Recordarme
+                        </label>
+                    </div>
+                    <a href="#" class="forgot-link">Olvide mi contrasena</a>
+                </div>
+
+                <!-- Login Button -->
+                <button type="submit" class="btn btn-login" id="btnLogin">
+                    Iniciar Sesion
+                </button>
+
+                <!-- Divider -->
+                <div class="divider">
+                    <span>o continua con</span>
+                </div>
+
+                <!-- Social Login -->
+                <div class="social-login">
+                    <button type="button" class="btn-social">
+                        <i class="bi bi-google"></i>
+                        <span>Google</span>
+                    </button>
+                    <button type="button" class="btn-social">
+                        <i class="bi bi-microsoft"></i>
+                        <span>Microsoft</span>
+                    </button>
+                </div>
+
+                <!-- Register Link -->
+                <p class="register-link">
+                    No tienes cuenta? <a href="#">Solicitar acceso</a>
+                </p>
+            </form>
+
+            <div class="login-footer">
+                <p>&copy; 2024 MediGest. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Toggle password visibility
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('toggleIcon');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('bi-eye');
+                toggleIcon.classList.add('bi-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('bi-eye-slash');
+                toggleIcon.classList.add('bi-eye');
+            }
+        }
+
+        // Form submission
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const btn = document.getElementById('btnLogin');
+            btn.classList.add('loading');
+
+            // Simulate login
+            setTimeout(() => {
+                btn.classList.remove('loading');
+                // Redirect to dashboard
+                window.location.href = 'index.html';
+            }, 1500);
+        });
+
+        // Demo: Show error message
+        function showError() {
+            const alert = document.getElementById('alertError');
+            alert.classList.add('show');
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carga de Presupuesto</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c5aa0;
+            --secondary-color: #5a8fd4;
+            --accent-color: #e8f0fe;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .invoice-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin: 30px auto;
+            max-width: 1100px;
+        }
+
+        .invoice-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 25px 30px;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .invoice-header h1 {
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .invoice-body {
+            padding: 30px;
+        }
+
+        .section-title {
+            color: var(--primary-color);
+            font-weight: 600;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: #495057;
+            font-size: 0.9rem;
+        }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            padding: 10px 14px;
+            transition: all 0.2s;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(90, 143, 212, 0.15);
+        }
+
+        .info-card {
+            background: var(--accent-color);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .attachment-zone {
+            border: 2px dashed #ced4da;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background: #fafbfc;
+        }
+
+        .attachment-zone:hover {
+            border-color: var(--secondary-color);
+            background: var(--accent-color);
+        }
+
+        .attachment-zone i {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .items-table {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .items-table thead {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .items-table th {
+            font-weight: 500;
+            padding: 14px 12px;
+            border: none;
+        }
+
+        .items-table td {
+            padding: 12px;
+            vertical-align: middle;
+        }
+
+        .items-table tbody tr:hover {
+            background-color: var(--accent-color);
+        }
+
+        .items-table .form-control {
+            padding: 8px 10px;
+            font-size: 0.9rem;
+        }
+
+        .btn-add-item {
+            background: var(--accent-color);
+            color: var(--primary-color);
+            border: 2px dashed var(--primary-color);
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-add-item:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-remove-item {
+            color: #dc3545;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+        }
+
+        .totals-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .total-row:last-child {
+            border-bottom: none;
+        }
+
+        .total-row.grand-total {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            border-top: 2px solid var(--primary-color);
+            padding-top: 15px;
+            margin-top: 10px;
+        }
+
+        .legend-input {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 10px 14px;
+        }
+
+        .invoice-footer {
+            background: var(--accent-color);
+            padding: 20px 30px;
+            border-radius: 0 0 12px 12px;
+            text-align: right;
+        }
+
+        .btn-primary-custom {
+            background: var(--primary-color);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-primary-custom:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary-custom {
+            background: white;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+            padding: 10px 25px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .btn-secondary-custom:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .presupuesto-number {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+        }
+
+        .coverage-toggle .btn-check:checked + .btn {
+            background: var(--primary-color);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <!-- Header -->
+        <div class="invoice-header d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="bi bi-file-earmark-medical me-2"></i>Presupuesto</h1>
+                <small class="opacity-75">Sistema de Carga de Presupuestos</small>
+            </div>
+            <div class="text-end">
+                <div class="presupuesto-number">
+                    <strong>N:</strong> <span id="presupuestoNumero">0001-00000125</span>
+                </div>
+                <div class="mt-2">
+                    <input type="date" class="form-control form-control-sm bg-transparent text-white border-light"
+                           id="fechaPresupuesto" style="max-width: 160px;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="invoice-body">
+            <!-- Datos Principales -->
+            <div class="row">
+                <!-- Columna Izquierda: Paciente y Cliente -->
+                <div class="col-lg-6">
+                    <div class="info-card h-100">
+                        <h5 class="section-title"><i class="bi bi-person-fill me-2"></i>Datos del Paciente / Cliente</h5>
+
+                        <div class="mb-3">
+                            <label class="form-label">Paciente</label>
+                            <input type="text" class="form-control" placeholder="Nombre completo del paciente">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Razn Social (Cliente)</label>
+                            <input type="text" class="form-control" placeholder="Razn social o nombre del cliente">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-7 mb-3">
+                                <label class="form-label">Obra Social</label>
+                                <select class="form-select">
+                                    <option value="">Seleccionar obra social...</option>
+                                    <option>OSDE</option>
+                                    <option>Swiss Medical</option>
+                                    <option>Galeno</option>
+                                    <option>PAMI</option>
+                                    <option>IOMA</option>
+                                    <option>Otra</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5 mb-3">
+                                <label class="form-label">N Obra Social</label>
+                                <input type="text" class="form-control" placeholder="N afiliado">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Documentos Adjuntos -->
+                <div class="col-lg-6">
+                    <div class="info-card h-100">
+                        <h5 class="section-title"><i class="bi bi-paperclip me-2"></i>Documentos Adjuntos</h5>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Orden de Compra</label>
+                                <div class="attachment-zone">
+                                    <i class="bi bi-cloud-upload"></i>
+                                    <p class="mb-0 small text-muted mt-1">Subir archivo</p>
+                                    <input type="file" class="d-none">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Certificado Discapacidad</label>
+                                <div class="attachment-zone">
+                                    <i class="bi bi-cloud-upload"></i>
+                                    <p class="mb-0 small text-muted mt-1">Subir archivo</p>
+                                    <input type="file" class="d-none">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Orden Mdica</label>
+                                <div class="attachment-zone">
+                                    <i class="bi bi-cloud-upload"></i>
+                                    <p class="mb-0 small text-muted mt-1">Subir archivo</p>
+                                    <input type="file" class="d-none">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Otro Documento</label>
+                                <div class="attachment-zone">
+                                    <i class="bi bi-cloud-upload"></i>
+                                    <p class="mb-0 small text-muted mt-1">Subir archivo</p>
+                                    <input type="file" class="d-none">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cobertura y Descuento -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="info-card">
+                        <h5 class="section-title"><i class="bi bi-shield-check me-2"></i>Cobertura</h5>
+                        <div class="row align-items-end">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tipo de Cobertura</label>
+                                <div class="btn-group w-100 coverage-toggle" role="group">
+                                    <input type="radio" class="btn-check" name="tipoCoberturaGeneral" id="cobPorcentaje" checked>
+                                    <label class="btn btn-outline-secondary" for="cobPorcentaje">%</label>
+                                    <input type="radio" class="btn-check" name="tipoCoberturaGeneral" id="cobPesos">
+                                    <label class="btn btn-outline-secondary" for="cobPesos">$</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Valor Cobertura</label>
+                                <div class="input-group">
+                                    <span class="input-group-text" id="coberturaSimbolo">%</span>
+                                    <input type="number" class="form-control" placeholder="0.00" id="coberturaValor">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="info-card">
+                        <h5 class="section-title"><i class="bi bi-tag me-2"></i>Descuento</h5>
+                        <div class="row align-items-end">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tipo de Descuento</label>
+                                <div class="btn-group w-100 coverage-toggle" role="group">
+                                    <input type="radio" class="btn-check" name="tipoDescuento" id="descPorcentaje" checked>
+                                    <label class="btn btn-outline-secondary" for="descPorcentaje">%</label>
+                                    <input type="radio" class="btn-check" name="tipoDescuento" id="descPesos">
+                                    <label class="btn btn-outline-secondary" for="descPesos">$</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Valor Descuento</label>
+                                <div class="input-group">
+                                    <span class="input-group-text" id="descuentoSimbolo">%</span>
+                                    <input type="number" class="form-control" placeholder="0.00" id="descuentoValor">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Items -->
+            <div class="mt-4">
+                <h5 class="section-title"><i class="bi bi-list-check me-2"></i>Detalle de Items</h5>
+                <div class="table-responsive">
+                    <table class="table items-table mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%">#</th>
+                                <th style="width: 12%">Artculo</th>
+                                <th style="width: 25%">Descripcin</th>
+                                <th style="width: 8%">Cant.</th>
+                                <th style="width: 13%">P. Unitario</th>
+                                <th style="width: 13%">Importe</th>
+                                <th style="width: 15%">Cobertura</th>
+                                <th style="width: 5%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsTableBody">
+                            <tr>
+                                <td class="text-center">1</td>
+                                <td><input type="text" class="form-control" placeholder="Cdigo"></td>
+                                <td><input type="text" class="form-control" placeholder="Descripcin del artculo"></td>
+                                <td><input type="number" class="form-control item-cantidad text-center" value="1" min="1"></td>
+                                <td><input type="number" class="form-control item-precio" placeholder="0.00" step="0.01"></td>
+                                <td><input type="number" class="form-control item-importe bg-light" readonly placeholder="0.00"></td>
+                                <td><input type="number" class="form-control item-cobertura" placeholder="0.00" step="0.01"></td>
+                                <td class="text-center">
+                                    <button type="button" class="btn-remove-item" onclick="removeItem(this)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-center">2</td>
+                                <td><input type="text" class="form-control" placeholder="Cdigo"></td>
+                                <td><input type="text" class="form-control" placeholder="Descripcin del artculo"></td>
+                                <td><input type="number" class="form-control item-cantidad text-center" value="1" min="1"></td>
+                                <td><input type="number" class="form-control item-precio" placeholder="0.00" step="0.01"></td>
+                                <td><input type="number" class="form-control item-importe bg-light" readonly placeholder="0.00"></td>
+                                <td><input type="number" class="form-control item-cobertura" placeholder="0.00" step="0.01"></td>
+                                <td class="text-center">
+                                    <button type="button" class="btn-remove-item" onclick="removeItem(this)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-add-item mt-3" onclick="addItem()">
+                    <i class="bi bi-plus-circle me-2"></i>Agregar Item
+                </button>
+            </div>
+
+            <!-- Totales y Leyendas -->
+            <div class="row mt-4">
+                <!-- Leyendas -->
+                <div class="col-lg-7">
+                    <h5 class="section-title"><i class="bi bi-chat-left-text me-2"></i>Leyendas</h5>
+                    <div class="mb-2">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">1</span>
+                            <input type="text" class="form-control legend-input" placeholder="Ingrese leyenda 1...">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">2</span>
+                            <input type="text" class="form-control legend-input" placeholder="Ingrese leyenda 2...">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">3</span>
+                            <input type="text" class="form-control legend-input" placeholder="Ingrese leyenda 3...">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">4</span>
+                            <input type="text" class="form-control legend-input" placeholder="Ingrese leyenda 4...">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">5</span>
+                            <input type="text" class="form-control legend-input" placeholder="Ingrese leyenda 5...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Totales -->
+                <div class="col-lg-5">
+                    <h5 class="section-title"><i class="bi bi-calculator me-2"></i>Totales</h5>
+                    <div class="totals-section">
+                        <div class="total-row">
+                            <span>Subtotal:</span>
+                            <strong id="subtotal">$ 0.00</strong>
+                        </div>
+                        <div class="total-row">
+                            <span>Cobertura Total:</span>
+                            <strong class="text-success" id="coberturaTotal">- $ 0.00</strong>
+                        </div>
+                        <div class="total-row">
+                            <span>Descuento:</span>
+                            <strong class="text-danger" id="descuentoTotal">- $ 0.00</strong>
+                        </div>
+                        <div class="total-row">
+                            <span>IVA (21%):</span>
+                            <strong id="ivaTotal">$ 0.00</strong>
+                        </div>
+                        <div class="total-row grand-total">
+                            <span>TOTAL A PAGAR:</span>
+                            <strong id="totalFinal">$ 0.00</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="invoice-footer">
+            <button type="button" class="btn btn-secondary-custom me-2">
+                <i class="bi bi-printer me-1"></i> Imprimir
+            </button>
+            <button type="button" class="btn btn-secondary-custom me-2">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Exportar PDF
+            </button>
+            <button type="button" class="btn btn-primary btn-primary-custom">
+                <i class="bi bi-check-circle me-1"></i> Guardar Presupuesto
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Inicializar fecha actual
+        document.getElementById('fechaPresupuesto').valueAsDate = new Date();
+
+        // Contador de items
+        let itemCount = 2;
+
+        // Agregar nuevo item
+        function addItem() {
+            itemCount++;
+            const tbody = document.getElementById('itemsTableBody');
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td class="text-center">${itemCount}</td>
+                <td><input type="text" class="form-control" placeholder="Cdigo"></td>
+                <td><input type="text" class="form-control" placeholder="Descripcin del artculo"></td>
+                <td><input type="number" class="form-control item-cantidad text-center" value="1" min="1"></td>
+                <td><input type="number" class="form-control item-precio" placeholder="0.00" step="0.01"></td>
+                <td><input type="number" class="form-control item-importe bg-light" readonly placeholder="0.00"></td>
+                <td><input type="number" class="form-control item-cobertura" placeholder="0.00" step="0.01"></td>
+                <td class="text-center">
+                    <button type="button" class="btn-remove-item" onclick="removeItem(this)">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(newRow);
+            attachItemListeners(newRow);
+        }
+
+        // Eliminar item
+        function removeItem(button) {
+            const row = button.closest('tr');
+            row.remove();
+            recalculateTotals();
+            renumberItems();
+        }
+
+        // Renumerar items
+        function renumberItems() {
+            const rows = document.querySelectorAll('#itemsTableBody tr');
+            rows.forEach((row, index) => {
+                row.cells[0].textContent = index + 1;
+            });
+            itemCount = rows.length;
+        }
+
+        // Calcular importe de una fila
+        function calculateRowImporte(row) {
+            const cantidad = parseFloat(row.querySelector('.item-cantidad').value) || 0;
+            const precio = parseFloat(row.querySelector('.item-precio').value) || 0;
+            const importe = cantidad * precio;
+            row.querySelector('.item-importe').value = importe.toFixed(2);
+            recalculateTotals();
+        }
+
+        // Recalcular todos los totales
+        function recalculateTotals() {
+            let subtotal = 0;
+            let coberturaTotal = 0;
+
+            document.querySelectorAll('#itemsTableBody tr').forEach(row => {
+                const importe = parseFloat(row.querySelector('.item-importe').value) || 0;
+                const cobertura = parseFloat(row.querySelector('.item-cobertura').value) || 0;
+                subtotal += importe;
+                coberturaTotal += cobertura;
+            });
+
+            // Obtener descuento
+            const descuentoValor = parseFloat(document.getElementById('descuentoValor').value) || 0;
+            const esPorcentajeDesc = document.getElementById('descPorcentaje').checked;
+            let descuento = esPorcentajeDesc ? (subtotal * descuentoValor / 100) : descuentoValor;
+
+            // Calcular base imponible
+            const baseImponible = subtotal - coberturaTotal - descuento;
+            const iva = baseImponible * 0.21;
+            const total = baseImponible + iva;
+
+            // Actualizar UI
+            document.getElementById('subtotal').textContent = `$ ${subtotal.toFixed(2)}`;
+            document.getElementById('coberturaTotal').textContent = `- $ ${coberturaTotal.toFixed(2)}`;
+            document.getElementById('descuentoTotal').textContent = `- $ ${descuento.toFixed(2)}`;
+            document.getElementById('ivaTotal').textContent = `$ ${iva.toFixed(2)}`;
+            document.getElementById('totalFinal').textContent = `$ ${total.toFixed(2)}`;
+        }
+
+        // Adjuntar listeners a items
+        function attachItemListeners(row) {
+            row.querySelector('.item-cantidad').addEventListener('input', () => calculateRowImporte(row));
+            row.querySelector('.item-precio').addEventListener('input', () => calculateRowImporte(row));
+            row.querySelector('.item-cobertura').addEventListener('input', recalculateTotals);
+        }
+
+        // Inicializar listeners existentes
+        document.querySelectorAll('#itemsTableBody tr').forEach(row => {
+            attachItemListeners(row);
+        });
+
+        // Listener para descuento
+        document.getElementById('descuentoValor').addEventListener('input', recalculateTotals);
+        document.getElementById('descPorcentaje').addEventListener('change', function() {
+            document.getElementById('descuentoSimbolo').textContent = '%';
+            recalculateTotals();
+        });
+        document.getElementById('descPesos').addEventListener('change', function() {
+            document.getElementById('descuentoSimbolo').textContent = '$';
+            recalculateTotals();
+        });
+
+        // Listener para cobertura general
+        document.getElementById('cobPorcentaje').addEventListener('change', function() {
+            document.getElementById('coberturaSimbolo').textContent = '%';
+        });
+        document.getElementById('cobPesos').addEventListener('change', function() {
+            document.getElementById('coberturaSimbolo').textContent = '$';
+        });
+
+        // Attachment zones click handler
+        document.querySelectorAll('.attachment-zone').forEach(zone => {
+            zone.addEventListener('click', function() {
+                this.querySelector('input[type="file"]').click();
+            });
+        });
+    </script>
+</body>
+</html>
