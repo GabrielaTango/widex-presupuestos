@@ -22,9 +22,11 @@ secrets.json
 *.suo
 *.userosscache
 *.sln.docstates
-backend/appsettings.json
-backend/appsettings.Development.json
-backend/appsettings.Production.json
+# appsettings: se versiona sólo el base (con placeholders CHANGE_ME).
+# Los overrides con credenciales reales NO se commitean.
+backend/**/appsettings.Development.json
+backend/**/appsettings.Production.json
+backend/**/appsettings.*.local.json
 
 # Visual Studio / Rider / VS Code
 .vs/
