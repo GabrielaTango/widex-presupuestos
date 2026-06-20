@@ -1,5 +1,6 @@
 using DbUp;
 using DbUp.Engine;
+using DbUp.Helpers;
 using DbUp.Support;
 
 namespace WidexPresupuestos.Api.Infrastructure;
@@ -62,5 +63,36 @@ public static class DbMigrator
         }
 
         logger.LogInformation("DbUp: migraciones aplicadas correctamente.");
+    }
+
+    /// <summary>
+    /// Carga datos de PRUEBA (maestros) — sólo para desarrollo, mientras el Sync
+    /// no existe. Usa NullJournal (corre en cada arranque) y los scripts son
+    /// idempotentes (INSERT IGNORE), así que re-ejecutarlos es inofensivo.
+    /// NO debe llamarse en producción.
+    /// </summary>
+    public static void RunDevSeed(string connectionString, string seedPath, ILogger logger)
+    {
+        if (!Directory.Exists(seedPath))
+        {
+            logger.LogWarning("Dev-seed: la carpeta '{Path}' no existe. Se omite.", seedPath);
+            return;
+        }
+
+        var upgrader = DeployChanges.To
+            .MySqlDatabase(connectionString)
+            .WithScriptsFromFileSystem(seedPath, f => f.EndsWith(".sql", StringComparison.OrdinalIgnoreCase))
+            .JournalTo(new NullJournal())   // no registra: corre siempre
+            .LogToConsole()
+            .Build();
+
+        var result = upgrader.PerformUpgrade();
+        if (!result.Successful)
+        {
+            logger.LogError(result.Error, "Dev-seed: error al cargar datos de prueba.");
+            throw new InvalidOperationException("Fallo el dev-seed.", result.Error);
+        }
+
+        logger.LogInformation("Dev-seed: datos de prueba cargados.");
     }
 }

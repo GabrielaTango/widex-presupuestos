@@ -83,6 +83,10 @@ scriptsPath = Path.GetFullPath(scriptsPath);
 
 DbMigrator.Run(connectionString, scriptsPath, app.Logger);
 
+// Datos de prueba SÓLO en desarrollo (mientras el Sync no carga los maestros).
+if (app.Environment.IsDevelopment())
+    DbMigrator.RunDevSeed(connectionString, Path.Combine(scriptsPath, "dev-seed"), app.Logger);
+
 // ── Pipeline ──────────────────────────────────────────────
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
