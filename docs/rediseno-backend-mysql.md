@@ -396,6 +396,18 @@ CREATE TABLE sync_log (
   PRIMARY KEY (id),
   KEY ix_synclog_entidad (entidad, inicio)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Estado del sync incremental: última versión de SQL Server Change Tracking
+-- (CHANGE_TRACKING_VERSION) consumida por tabla-origen del ERP. Ver §5.1.
+CREATE TABLE sync_state (
+  id                  BIGINT      NOT NULL AUTO_INCREMENT,
+  tabla_origen        VARCHAR(40) NOT NULL,           -- 'GVA14', 'STA11', 'STA19', ...
+  last_change_version BIGINT      NULL,               -- NULL = nunca sincronizada (requiere full load)
+  last_full_load      DATETIME    NULL,
+  updated_at          DATETIME    NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_sync_state_tabla (tabla_origen)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
 ---
@@ -424,6 +436,57 @@ ON DUPLICATE KEY UPDATE
 El detalle exacto de cada `SELECT` ya existe en los repositorios actuales
 (`ArticuloRepository.cs`, `ClienteRepository.cs`, `VendedorRepository.cs`); se
 **reubican** en el Sync Worker en vez de ejecutarse en cada request.
+
+### 5.1. Sincronización incremental con SQL Server Change Tracking
+
+Las tablas del ERP **no tienen fecha de modificación confiable**. Se usa
+**Change Tracking (CT)** de SQL Server: liviano, devuelve la versión neta de
+cambios por fila (altas/bajas/modificaciones) desde una versión dada, sin tocar
+el esquema visible. (No CDC: CDC es más pesado y captura histórico columna por
+columna vía el log; no lo necesitamos.)
+
+**Habilitación en el ERP (DDL, una vez):**
+```sql
+ALTER DATABASE WIDEX_ARGENTINA_SA
+  SET CHANGE_TRACKING = ON (CHANGE_RETENTION = 7 DAYS, AUTO_CLEANUP = ON);
+ALTER TABLE GVA14 ENABLE CHANGE_TRACKING;   -- clientes
+ALTER TABLE GVA23 ENABLE CHANGE_TRACKING;   -- vendedores
+ALTER TABLE STA11 ENABLE CHANGE_TRACKING;   -- artículos (maestro)
+ALTER TABLE GVA17 ENABLE CHANGE_TRACKING;   -- precios
+ALTER TABLE STA19 ENABLE CHANGE_TRACKING;   -- stock
+ALTER TABLE STA11FLD ENABLE CHANGE_TRACKING; -- categorías
+-- GVA43 (talonarios) cambia rara vez: CT opcional o full sync.
+```
+> CT requiere **PK** en cada tabla rastreada. La retención (7 días) debe ser
+> `>` que el intervalo del sync; si se supera, la versión guardada expira.
+
+**Algoritmo por entidad de una sola tabla (clientes, vendedores):**
+1. `@current = CHANGE_TRACKING_CURRENT_VERSION()`.
+2. Leer `last_change_version` de `sync_state` para esa tabla.
+3. **Full load** si `last_change_version IS NULL` **o** es menor que
+   `CHANGE_TRACKING_MIN_VALID_VERSION(OBJECT_ID('GVA14'))` (versión expiró →
+   los cambios ya se limpiaron): traer todo por lotes y upsert.
+4. Si no, **delta**:
+   ```sql
+   SELECT ct.SYS_CHANGE_OPERATION, ct.COD_CLIENT, g.*
+   FROM CHANGETABLE(CHANGES GVA14, @last_version) ct
+   LEFT JOIN GVA14 g ON g.COD_CLIENT = ct.COD_CLIENT;
+   ```
+   - `I`/`U` → upsert en MySQL. `D` → marcar `activo = 0` (no borrar).
+5. Guardar `@current` en `sync_state.last_change_version`.
+
+**`articulos` es multi-tabla (caso especial):** el artículo se arma de `STA11`
+(maestro) + `GVA17` (precio) + `STA19` (stock) + `BA_DIFFAC_NEW` (cobertura). CT
+es **por tabla**, así que un cambio de precio o stock **no** aparece en `STA11`.
+El delta de artículos es la **unión de `COD_ARTICU`** que cambiaron en
+`STA11` ∪ `GVA17` ∪ `STA19` (cada una con su propia `last_change_version` en
+`sync_state`); para cada `COD_ARTICU` afectado se re-arma la fila completa con el
+JOIN original y se hace upsert. El **stock** (`STA19`) es el que más se mueve
+(cada venta) → su delta mantiene el stock fresco sin releer todo el catálogo.
+
+**Primera corrida = full load** de cada tabla (los 135k de clientes incluidos),
+en **lotes** (`INSERT ... ON DUPLICATE KEY UPDATE` de ~500–1000 filas, commit por
+lote). A partir de ahí cada ciclo mueve sólo los cambios.
 
 ---
 
@@ -499,11 +562,14 @@ WidexPresupuestos.sln
 
 ### 7.4. Sync Worker (proyecto `Sync`)
 
-Worker Service independiente con jobs programados: ERP→app (maestros/stock,
-upsert idempotente) y app→ERP (pedidos en `estado_sync='pendiente_envio'`). Cada
-corrida registra en `sync_log`. Los `SELECT` de Tango actuales
+Worker Service independiente con jobs programados:
+- **ERP→app** (maestros/stock): sync **incremental con Change Tracking** (ver
+  §5.1), upsert idempotente por lotes, estado en `sync_state`.
+- **app→ERP**: pedidos en `estado_sync='pendiente_envio'`.
+
+Cada corrida registra en `sync_log`. Los `SELECT` de Tango actuales
 (`ArticuloRepository`, `ClienteRepository`, `VendedorRepository`) se **reubican**
-acá.
+acá como **carga full inicial**; los ciclos siguientes usan el delta de CT.
 
 ---
 
