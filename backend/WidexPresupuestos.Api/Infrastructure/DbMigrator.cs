@@ -1,7 +1,6 @@
 using DbUp;
 using DbUp.Engine;
 using DbUp.Helpers;
-using DbUp.Support;
 
 namespace WidexPresupuestos.Api.Infrastructure;
 
@@ -28,41 +27,47 @@ public static class DbMigrator
         // CREATE DATABASE requiere privilegio global que el usuario de app no tiene; la base ya existe.
         static bool IsCreateDb(string f) => f.Contains("create_database", StringComparison.OrdinalIgnoreCase);
 
-        var upgrader = DeployChanges.To
+        // IMPORTANTE: esquema y seed van en DOS upgraders SECUENCIALES, no en uno solo.
+        // Mezclar run-once + run-always en un mismo UpgradeEngine no garantiza el orden
+        // (DbUp puede correr el seed antes de crear las tablas) y rompe en base vacía.
+
+        // 1) Esquema (run-once): se registra en schemaversions y no se repite.
+        //    Excluye los .sql viejos de MSSQL, el create_database y el seed.
+        var schema = DeployChanges.To
             .MySqlDatabase(connectionString)
-            // Esquema (run-once): se registra en schemaversions y no se repite.
-            // Excluye los .sql viejos de MSSQL, el create_database y el seed.
-            .WithScriptsFromFileSystem(
-                scriptsPath,
-                f => IsMySql(f) && !IsCreateDb(f) && !IsSeed(f))
-            // Seed (run-always): idempotente; se re-aplica en cada arranque para que
-            // un cambio en los datos semilla (p. ej. la sucursal del correlativo PED)
-            // tome efecto sin tener que versionar un script nuevo.
-            .WithScriptsFromFileSystem(
-                scriptsPath,
-                f => IsMySql(f) && IsSeed(f),
-                new SqlScriptOptions { ScriptType = ScriptType.RunAlways, RunGroupOrder = 1 })
-            // Sin transacción por script: el DDL de MySQL hace commit implícito,
-            // así que envolverlo en transacción no aporta y puede generar conflictos.
+            .WithScriptsFromFileSystem(scriptsPath, f => IsMySql(f) && !IsCreateDb(f) && !IsSeed(f))
             .LogToConsole()
             .Build();
+        Aplicar(schema, "esquema", logger);
 
+        // 2) Seed (run-always): corre SIEMPRE, después del esquema. NullJournal = no
+        //    se registra, y los scripts son idempotentes, así que un seed editado
+        //    (p. ej. la sucursal del correlativo PED) se re-aplica sin versionar.
+        var seed = DeployChanges.To
+            .MySqlDatabase(connectionString)
+            .WithScriptsFromFileSystem(scriptsPath, f => IsMySql(f) && IsSeed(f))
+            .JournalTo(new NullJournal())
+            .LogToConsole()
+            .Build();
+        Aplicar(seed, "seed", logger);
+    }
+
+    private static void Aplicar(UpgradeEngine upgrader, string nombre, ILogger logger)
+    {
         if (!upgrader.IsUpgradeRequired())
         {
-            logger.LogInformation("DbUp: base de datos actualizada, no hay scripts pendientes.");
+            logger.LogInformation("DbUp ({Nombre}): sin scripts pendientes.", nombre);
             return;
         }
 
-        logger.LogInformation("DbUp: aplicando scripts desde '{Path}'...", scriptsPath);
         var result = upgrader.PerformUpgrade();
-
         if (!result.Successful)
         {
-            logger.LogError(result.Error, "DbUp: error al aplicar migraciones.");
-            throw new InvalidOperationException("Fallo la migración de base de datos.", result.Error);
+            logger.LogError(result.Error, "DbUp ({Nombre}): error al aplicar scripts.", nombre);
+            throw new InvalidOperationException($"Fallo la migración de base de datos ({nombre}).", result.Error);
         }
 
-        logger.LogInformation("DbUp: migraciones aplicadas correctamente.");
+        logger.LogInformation("DbUp ({Nombre}): scripts aplicados correctamente.", nombre);
     }
 
     /// <summary>

@@ -2,4 +2,6 @@
   <Project Path="WidexPresupuestos.Api/WidexPresupuestos.Api.csproj" />
   <Project Path="WidexPresupuestos.Shared/WidexPresupuestos.Shared.csproj" />
   <Project Path="WidexPresupuestos.Sync/WidexPresupuestos.Sync.csproj" />
+  <Project Path="WidexPresupuestos.Tests.Integration/WidexPresupuestos.Tests.Integration.csproj" />
+  <Project Path="WidexPresupuestos.Tests.Unit/WidexPresupuestos.Tests.Unit.csproj" />
 </Solution>
