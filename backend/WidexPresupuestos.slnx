@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="WidexPresupuestos.Api/WidexPresupuestos.Api.csproj" />
+  <Project Path="WidexPresupuestos.Shared/WidexPresupuestos.Shared.csproj" />
+  <Project Path="WidexPresupuestos.Sync/WidexPresupuestos.Sync.csproj" />
+</Solution>

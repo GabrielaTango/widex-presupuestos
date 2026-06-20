@@ -1,3 +1,18 @@
-bin/
-obj/
+# Artefactos de build del host: NO deben entrar al contenedor.
+# El obj/ del host referencia el cache de NuGet de Windows y rompe el restore en Linux.
+# Hace falta **/ para alcanzar los subproyectos (Api/obj, Shared/obj, Sync/obj).
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# IDE / usuario
+**/.vs/
+**/.vscode/
+**/.idea/
+**/*.user
+**/*.suo
+
+# Otros
 .env
+**/.git/

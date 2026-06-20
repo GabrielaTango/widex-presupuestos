@@ -1,18 +1,51 @@
 services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      # Credenciales de MySQL (app) — independientes de las de SQL Server/Tango del .env.
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-widex_presupuestos}
+      MYSQL_USER: ${MYSQL_USER:-widex}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-widexpass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpass}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   backend:
     build:
       context: ./backend
+      dockerfile: WidexPresupuestos.Api/Dockerfile
     expose:
       - "8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
     env_file:
       - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
-      - ConnectionStrings__DefaultConnection=Server=${DB_SERVER};Database=${DB_NAME};User Id=${DB_USER};Password=${DB_PASSWORD};TrustServerCertificate=true;
-      - ConnectionStrings__TangoConnection=Server=${DB_SERVER};Database=${DB_TANGO_NAME};User Id=${DB_USER};Password=${DB_PASSWORD};TrustServerCertificate=true;
-      - Jwt__Key=${JWT_KEY}
+      - ConnectionStrings__DefaultConnection=Server=mysql;Port=3306;Database=${MYSQL_DATABASE:-widex_presupuestos};User Id=${MYSQL_USER:-widex};Password=${MYSQL_PASSWORD:-widexpass};AllowPublicKeyRetrieval=true;SslMode=Preferred;
+      # Falla el `up` si JWT_KEY no está definida (en vez de arrancar con clave vacía).
+      - Jwt__Key=${JWT_KEY:?JWT_KEY es requerida y debe tener al menos 32 caracteres}
       - Jwt__Issuer=WidexPresupuestos
       - Jwt__Audience=WidexPresupuestos
+      # Origen del frontend para CORS (el front Docker se publica en :3000).
+      - Cors__AllowedOrigins__0=${FRONTEND_URL:-http://localhost:3000}
+      - DbUp__ScriptsPath=/app/database
+    volumes:
+      - ./database:/app/database:ro
     restart: unless-stopped
     logging:
       driver: json-file
@@ -33,3 +66,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+volumes:
+  mysql_data:
