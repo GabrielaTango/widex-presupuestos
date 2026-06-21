@@ -30,8 +30,9 @@ builder.Services.AddSingleton<IDbConnectionFactory>(
 builder.Services.AddSingleton<SyncStateRepository>();
 builder.Services.AddSingleton<SyncLogRepository>();
 
-// ── Servicios de entidades ─────────────────────────────────────────────────
-builder.Services.AddSingleton<ClientesSyncService>();
+// ── Servicios de entidades (cada uno como EntitySyncService → el Worker los recorre) ──
+builder.Services.AddSingleton<EntitySyncService, ClientesSyncService>();
+builder.Services.AddSingleton<EntitySyncService, VendedoresSyncService>();
 
 // ── Worker ─────────────────────────────────────────────────────────────────
 builder.Services.AddHostedService<Worker>();

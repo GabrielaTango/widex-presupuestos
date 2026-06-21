@@ -6,30 +6,31 @@ namespace WidexPresupuestos.Sync;
 
 /// <summary>
 /// Worker principal del Sync. Loop periódico por PeriodicTimer.
-/// Un error en una entidad NO tumba el worker; se loguea y se espera el siguiente tick.
+/// Recorre todas las entidades registradas; un error en una NO frena a las otras
+/// ni tumba el worker (se loguea y se espera el siguiente tick).
 /// </summary>
 public sealed class Worker : BackgroundService
 {
-    private readonly ClientesSyncService _clientes;
-    private readonly SyncOptions         _opts;
-    private readonly ILogger<Worker>     _logger;
+    private readonly IReadOnlyList<EntitySyncService> _entidades;
+    private readonly SyncOptions     _opts;
+    private readonly ILogger<Worker> _logger;
 
     public Worker(
-        ClientesSyncService  clientes,
-        IOptions<SyncOptions> opts,
-        ILogger<Worker>      logger)
+        IEnumerable<EntitySyncService> entidades,
+        IOptions<SyncOptions>          opts,
+        ILogger<Worker>                logger)
     {
-        _clientes = clientes;
-        _opts     = opts.Value;
-        _logger   = logger;
+        _entidades = entidades.ToList();
+        _opts      = opts.Value;
+        _logger    = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Sync worker iniciado. Intervalo: {I}s.", _opts.IntervalSeconds);
+        _logger.LogInformation("Sync worker iniciado. {N} entidades, intervalo {I}s.",
+            _entidades.Count, _opts.IntervalSeconds);
 
-        // Primera corrida inmediata
-        await RunCycleAsync(stoppingToken);
+        await RunCycleAsync(stoppingToken);   // primera corrida inmediata
 
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(_opts.IntervalSeconds));
         while (!stoppingToken.IsCancellationRequested && await timer.WaitForNextTickAsync(stoppingToken))
@@ -41,19 +42,23 @@ public sealed class Worker : BackgroundService
     private async Task RunCycleAsync(CancellationToken ct)
     {
         _logger.LogInformation("Iniciando ciclo de sync.");
-        try
+        foreach (var entidad in _entidades)
         {
-            await _clientes.RunAsync(ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            // Shutdown limpio, no es un error
-        }
-        catch (Exception ex)
-        {
-            // El error ya fue registrado en sync_log por el servicio.
-            // Logueamos aquí también para que sea visible en el host y seguimos.
-            _logger.LogError(ex, "Ciclo de sync terminó con error. Se reintentará en {I}s.", _opts.IntervalSeconds);
+            if (ct.IsCancellationRequested) break;
+            try
+            {
+                await entidad.RunAsync(ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                break;   // shutdown limpio
+            }
+            catch (Exception ex)
+            {
+                // Ya quedó registrado en sync_log por el servicio; logueamos y seguimos
+                // con la próxima entidad para no perder un ciclo entero por una sola.
+                _logger.LogError(ex, "[{E}] Falló en este ciclo. Continúa con las demás.", entidad.Nombre);
+            }
         }
     }
 }
