@@ -416,7 +416,7 @@ CREATE TABLE sync_state (
 
 | Tabla MySQL | Origen Tango | Notas de transformación |
 |---|---|---|
-| `clientes` (paciente) | `GVA14` WHERE `GRUPO_EMPR <> 'OB.SOC'` | `nro_carnet`/`obra_social`/`nro_lista` del **XML** `CAMPOS_ADICIONALES` (ver §5.2); `cuit` varchar(20) |
+| `clientes` (paciente) | `GVA14` WHERE `GRUPO_EMPR <> 'OB.SOC'` | `nro_carnet`/`obra_social` del **XML** `CAMPOS_ADICIONALES` (§5.2); `nro_lista` de la columna `NRO_LISTA`; `cuit` varchar(20) |
 | `clientes` (obra social) | `GVA14` WHERE `GRUPO_EMPR = 'OB.SOC'` | `es_obra_social = 1` |
 | `categorias` | `STA11FLD` | jerárquico por `IDPARENT` (raíz `IDFOLDER='45'`); `path` armado recorriendo padres; 99 filas → **full sync, sin CT** |
 | `articulos` | `STA11` + `STA11ITC` (categoría) + `STA19` (stock, **depósito configurable**) + `BA_DIFFAC_NEW` (cobertura) | `id_folder` de `STA11ITC.IDFOLDER`; filtro `PERFIL <> 'N'`; `articulos.precio` = lista 2 (default/fallback) |
@@ -459,9 +459,12 @@ de lo que asumía el código viejo:
   null / `''`. Regla: `seleccion_widex = 1` **sólo si es `'S'`** (30 de 1765
   habilitados). Reemplaza la doble negación `NOT IN ('N','')` del código viejo.
 - **Precio = lista 2 por default, pero cada cliente tiene su lista.** `GVA14`
-  tiene `NRO_LISTA` (lista asignada al cliente/obra social). Hay 35 listas en
-  `GVA10`; `articulos.precio` guarda la lista 2 como referencia/fallback, y los
-  precios por lista van en `precios`.
+  tiene la **columna directa** `NRO_LISTA` (no es un `CA_*`; se lee directo, no
+  del XML). La mayoría usa lista 2; ~6k usan lista 22 (USD). `NRO_LISTA = 0`
+  significa sin lista → tratar como fallback a lista 2. Hay 35 listas en `GVA10`;
+  `articulos.precio` guarda la lista 2 como referencia/fallback, y los precios
+  por lista van en `precios`. Dato sucio a tolerar: CUIT vacío o basura (ej.
+  `1111…` de 20 díg. en CONSUMIDOR FINAL).
 - **Monedas:** `GVA10.MON_CTE` (1=pesos, 0=dólar). Listas USD: 11, 14, 22, 23, 25.
   El precio crudo se guarda en su moneda; la conversión a pesos se hace **en
   pantalla / al grabar** con la `cotizacion` vigente (no en el sync).
