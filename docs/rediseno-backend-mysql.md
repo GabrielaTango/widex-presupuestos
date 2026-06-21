@@ -416,12 +416,15 @@ CREATE TABLE sync_state (
 
 | Tabla MySQL | Origen Tango | Notas de transformación |
 |---|---|---|
-| `clientes` (paciente) | `GVA14` WHERE `GRUPO_EMPR <> 'OB.SOC'` | `nro_carnet`/`obra_social` salen del XML `CAMPOS_ADICIONALES` (CA_1096) |
+| `clientes` (paciente) | `GVA14` WHERE `GRUPO_EMPR <> 'OB.SOC'` | `nro_carnet`/`obra_social`/`nro_lista` del **XML** `CAMPOS_ADICIONALES` (ver §5.2); `cuit` varchar(20) |
 | `clientes` (obra social) | `GVA14` WHERE `GRUPO_EMPR = 'OB.SOC'` | `es_obra_social = 1` |
-| `categorias` | `STA11FLD` (`IDFOLDER >= 45`) | `path` armado concatenando `DESCRIP` por nivel |
-| `articulos` | `STA11` + `GVA17` (lista 2) + `STA19` (dep. 01) + `sta11itc`/`STA11FLD` + `BA_DIFFAC_NEW` | `precio`, `stock`, `id_folder`, `cobertura_aplicable`, `cod_articu_dif`; filtro `PERFIL <> 'N'` |
-| `vendedores` | `GVA23` WHERE `INHABILITA = 0` | `seleccion_widex` desde XML `CA_1118_SELECCION_WIDEX` |
-| `talonarios` | `GVA43` WHERE `COMPROB='COT' AND FECHA_VTO='1800-01-01'` | |
+| `categorias` | `STA11FLD` | jerárquico por `IDPARENT` (raíz `IDFOLDER='45'`); `path` armado recorriendo padres; 99 filas → **full sync, sin CT** |
+| `articulos` | `STA11` + `STA11ITC` (categoría) + `STA19` (stock, **depósito configurable**) + `BA_DIFFAC_NEW` (cobertura) | `id_folder` de `STA11ITC.IDFOLDER`; filtro `PERFIL <> 'N'`; `articulos.precio` = lista 2 (default/fallback) |
+| `precios` | `GVA17` (todas las listas) | `(cod_articu, nro_de_lis, precio)` crudo en la moneda de la lista; ~37k filas |
+| `listas_precio` | `GVA10` | `moneda` de `MON_CTE` (1=ARS, 0=USD); `incluye_iva` de `INCLUY_IVA`; `habilitada` |
+| `cotizacion` | `COTIZACION` (`ID_MONEDA=2`, `ID_TIPO_COTIZACION=1`, último `FECHA_HORA`) | cotización USD→ARS vigente |
+| `vendedores` | `GVA23` WHERE `INHABILITA = 0` | `seleccion_widex = 1` sólo si el XML `CA_1118_SELECCION_WIDEX = 'S'` (ver §5.2) |
+| `talonarios` | `GVA43` WHERE `COMPROB='COT'` | sucursal viene `'00001'` (5 díg.); `PROXIMO` está **ofuscado** (sólo importa en push de pedidos, Fase 2b) |
 
 **Upsert idempotente** por clave de negocio:
 
@@ -436,6 +439,45 @@ ON DUPLICATE KEY UPDATE
 El detalle exacto de cada `SELECT` ya existe en los repositorios actuales
 (`ArticuloRepository.cs`, `ClienteRepository.cs`, `VendedorRepository.cs`); se
 **reubican** en el Sync Worker en vez de ejecutarse en cada request.
+
+### 5.2. Hallazgos de la exploración del ERP (validados contra Tango)
+
+Verificado conectándose a `WIDEX_ARGENTINA_SA` (SQL Server 2019). Lo que difiere
+de lo que asumía el código viejo:
+
+- **Campos `CA_*` viven en el XML, no en las columnas.** Las columnas `CA_*`
+  (p. ej. `GVA14.CA_1096_OBRA_SOCIAL`, `CA_1096_NRO_CARNETAFILIADOO`,
+  `GVA23.CA_1118_SELECCION_WIDEX`) están **deprecadas y desactualizadas**. El
+  valor vigente está en el XML `CAMPOS_ADICIONALES`. Extraer así:
+  ```sql
+  SET QUOTED_IDENTIFIER ON;  -- requerido por los métodos XML
+  -- castear a XML no tipado: el user read-only no tiene EXECUTE sobre el schema collection
+  CAST(CAST(CAMPOS_ADICIONALES AS nvarchar(max)) AS xml)
+      .value('(//CA_1096_OBRA_SOCIAL)[1]', 'varchar(6)')
+  ```
+- **`seleccion_widex`**: el XML `CA_1118_SELECCION_WIDEX` toma `'S'` / `'N'` /
+  null / `''`. Regla: `seleccion_widex = 1` **sólo si es `'S'`** (30 de 1765
+  habilitados). Reemplaza la doble negación `NOT IN ('N','')` del código viejo.
+- **Precio = lista 2 por default, pero cada cliente tiene su lista.** `GVA14`
+  tiene `NRO_LISTA` (lista asignada al cliente/obra social). Hay 35 listas en
+  `GVA10`; `articulos.precio` guarda la lista 2 como referencia/fallback, y los
+  precios por lista van en `precios`.
+- **Monedas:** `GVA10.MON_CTE` (1=pesos, 0=dólar). Listas USD: 11, 14, 22, 23, 25.
+  El precio crudo se guarda en su moneda; la conversión a pesos se hace **en
+  pantalla / al grabar** con la `cotizacion` vigente (no en el sync).
+- **Cotización:** tabla `COTIZACION`, `ID_MONEDA=2` (dólar), `ID_TIPO_COTIZACION=1`,
+  último `FECHA_HORA`. Actualización manual en Tango. (En la base de test está
+  vieja —2024—, en prod está al día.)
+- **Stock:** el código viejo usaba depósito `'01'` (sólo 645 filas). Hay decenas
+  de depósitos; el depósito de stock es **configurable** (no hardcodear `'01'`).
+- **Categorías:** `IDFOLDER` es alfanumérico → **no ordenar numéricamente**;
+  recorrer por `IDPARENT`. 99 filas → full sync.
+- **`INCLUY_IVA` por lista** (`GVA10`): algunas listas ya incluyen IVA (ej. lista
+  2). El front sumaba 21% siempre → **riesgo de doble IVA**. A resolver en el
+  cálculo (Fase 3), no en el sync.
+- **Longitudes reales** (ajustan el DDL): `clientes.cuit` → varchar(20);
+  `cod_client` varchar(6), carnet varchar(40), `cod_vended` varchar(10),
+  `cod_articu` varchar(15) — el resto del DDL ya las cubre.
 
 ### 5.1. Sincronización incremental con SQL Server Change Tracking
 
